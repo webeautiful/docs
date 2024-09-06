@@ -1,0 +1,87 @@
+---
+title: '私钥加解密'
+description: 'Flutter 如何对私钥进行加密存储和解密恢复'
+---
+
+要对私钥进行加密存储和解密恢复，可以使用Flutter中的加密库，如`encrypt`。以下是实现这一功能的步骤：
+
+## 1. 添加依赖
+
+在`pubspec.yaml`文件中添加`encrypt`库的依赖：
+
+```yaml
+dependencies:
+  encrypt: ^5.0.1
+```
+
+## 2. 加密私钥
+
+使用AES算法对私钥进行加密。以下是一个示例代码：
+
+```dart
+import 'package:encrypt/encrypt.dart';
+import 'dart:convert';
+
+class EncryptUtils {
+  static final key = Key.fromUtf8('my 32 length key................');
+  static final iv = IV.fromLength(16);
+
+  static String encryptPrivateKey(String privateKey) {
+    final encrypter = Encrypter(AES(key));
+    final encrypted = encrypter.encrypt(privateKey, iv: iv);
+    return encrypted.base64; // 返回加密后的私钥（Base64编码）
+  }
+}
+```
+
+## 3. 解密私钥
+
+使用相同的AES算法和密钥对加密的私钥进行解密：
+
+```dart
+class EncryptUtils {
+  // ... 之前的代码
+
+  static String decryptPrivateKey(String encryptedPrivateKey) {
+    final encrypter = Encrypter(AES(key));
+    final decrypted = encrypter.decrypt64(encryptedPrivateKey, iv: iv);
+    return decrypted; // 返回解密后的私钥
+  }
+}
+```
+
+## 4. 使用示例
+
+以下是如何使用上述加密和解密功能的示例：
+
+```dart
+void main() {
+  String privateKey = "your_private_key_here";
+
+  // 加密私钥
+  String encryptedPrivateKey = EncryptUtils.encryptPrivateKey(privateKey);
+  print("Encrypted Private Key: $encryptedPrivateKey");
+
+  // 解密私钥
+  String decryptedPrivateKey = EncryptUtils.decryptPrivateKey(encryptedPrivateKey);
+  print("Decrypted Private Key: $decryptedPrivateKey");
+}
+```
+
+## 注意事项
+
+- 确保密钥的长度符合AES的要求（例如，128位、192位或256位）。
+- 不要将密钥硬编码在代码中，建议使用安全的密钥管理方案。
+- 在生产环境中，确保使用安全的IV（初始化向量），并进行适当的密钥管理和存储。
+
+通过以上步骤，您可以在Flutter应用中实现私钥的加密存储和解密恢复功能。
+
+Citations:
+
+[1] https://juejin.cn/post/7020207522082619428
+
+[2] https://developer.baidu.com/article/details/3162727
+
+[3] https://juejin.cn/post/7250029395023446072
+
+[4] https://blog.csdn.net/bachelores/article/details/126899469

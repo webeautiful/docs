@@ -1,0 +1,100 @@
+---
+title: '助记词&私钥'
+description: 'Flutter 实现助记词导入恢复钱包功能'
+---
+
+要在Flutter中实现助记词导入和恢复钱包的功能，可以按照以下步骤进行：
+
+## 1. 生成助记词
+
+首先，您需要使用`bip39`插件来生成助记词。您可以在`pubspec.yaml`中添加以下依赖：
+
+```yaml
+dependencies:
+  bip39: ^1.0.6
+```
+
+然后，您可以使用以下代码生成助记词：
+
+```dart
+import 'package:bip39/bip39.dart' as bip39;
+
+String generateMnemonic() {
+  return bip39.generateMnemonic();
+}
+```
+
+## 2. 导入助记词并生成私钥
+
+在导入助记词时，您可以直接使用助记词生成私钥。为此，您还需要使用`bip32`插件，添加依赖：
+
+```yaml
+dependencies:
+  bip32: ^2.0.0
+```
+
+接下来，使用以下代码将助记词转换为私钥：
+
+```dart
+import 'package:bip39/bip39.dart' as bip39;
+import 'package:bip32/bip32.dart' as bip32;
+
+String getPrivateKey(String mnemonic) {
+  final seed = bip39.mnemonicToSeed(mnemonic);
+  final root = bip32.BIP32.fromSeed(seed);
+  final child = root.derivePath("m/44'/60'/0'/0/0");
+  return bytesToHex(child.privateKey!.toList());
+}
+```
+
+## 3. 生成钱包地址
+
+使用生成的私钥，您可以创建钱包地址。可以使用以下代码实现：
+
+```dart
+import 'package:web3dart/web3dart.dart';
+
+Future<EthereumAddress> getPublicAddress(String privateKey) async {
+  final private = EthPrivateKey.fromHex(privateKey);
+  return await private.extractAddress();
+}
+```
+
+## 4. 导入钱包
+
+导入钱包的过程与创建钱包类似，您只需跳过生成助记词的步骤，直接使用助记词生成私钥和钱包地址。
+
+## 5. 查看钱包余额
+
+要查看钱包余额，您需要使用`web3dart`插件。首先，添加依赖：
+
+```yaml
+dependencies:
+  web3dart: ^2.3.5
+```
+
+然后，您可以使用以下代码获取钱包余额：
+
+```dart
+import 'package:web3dart/web3dart.dart';
+import 'package:http/http.dart';
+
+Future<String> getBalance(String address) async {
+  String rpcUrl = "https://goerli.infura.io/v3/YOUR_INFURA_PROJECT_ID";
+  final client = Web3Client(rpcUrl, Client());
+  try {
+    EtherAmount balance = await client.getBalance(EthereumAddress.fromHex(address));
+    return balance.getValueInUnit(EtherUnit.ether).toStringAsFixed(12);
+  } catch (e) {
+    return "";
+  }
+}
+```
+
+通过以上步骤，您可以在Flutter中实现助记词导入和恢复钱包的功能。这些代码片段涵盖了生成助记词、导入助记词生成私钥和地址，以及查看钱包余额的基本流程[1][2].
+
+Citations:
+
+[1] https://blog.csdn.net/weixin_42686001/article/details/129042206
+
+[2] https://juejin.cn/post/7125317845465956389
