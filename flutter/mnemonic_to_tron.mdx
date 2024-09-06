@@ -1,0 +1,66 @@
+---
+title: '助记词生成tron钱包'
+description: 'Flutter 实现助记词导入恢复钱包功能'
+---
+在Flutter中使用助记词生成Tron钱包地址的步骤如下：
+
+## 1. 安装必要的依赖
+
+在`pubspec.yaml`文件中添加以下依赖：
+
+```yaml
+dependencies:
+  wallet: ^0.0.13  # 用于Tron相关操作
+  bip39: ^2.0.0    # 用于助记词生成
+```
+
+## 2. 从助记词生成Tron钱包地址
+
+以下是从助记词生成Tron钱包地址的代码示例：
+
+```dart
+import 'package:wallet/wallet.dart' as wallet;
+import 'package:bip39/bip39.dart' as bip39;
+
+String generateTronAddress(String mnemonic) {
+  // 生成种子
+  final seed = wallet.mnemonicToSeed(mnemonic);
+
+  // 创建主私钥
+  final masterKey = wallet.ExtendedPrivateKey.master(seed, wallet.xprv);
+
+  // 生成BIP44路径下的私钥（Tron的SLIP44编号是195）
+  final root = masterKey.forPath("m/44'/195'/0'/0/0");
+
+  // 获取私钥
+  final privateKey = wallet.PrivateKey((root as wallet.ExtendedPrivateKey).key);
+
+  // 从私钥生成公钥
+  final publicKey = wallet.tron.createPublicKey(privateKey);
+
+  // 从公钥生成Tron地址
+  final address = wallet.tron.createAddress(publicKey);
+
+  return address;  // 返回Tron地址
+}
+```
+
+## 3. 使用示例
+
+可以通过调用`generateTronAddress`函数并传入助记词来生成Tron地址：
+
+```dart
+void main() {
+  String mnemonic = "boost limit you peasant april setup print arrest love festival much consider";  // 替换为实际助记词
+  String tronAddress = generateTronAddress(mnemonic);
+  print("生成的Tron地址: $tronAddress");
+}
+```
+
+## 4. 注意事项
+
+- 确保助记词的格式正确，通常为12个或24个单词。
+- 生成的Tron地址通常以`T`开头。
+- 在实际应用中，确保妥善保管助记词，避免泄露。
+
+通过以上步骤，你可以在Flutter中成功使用助记词生成Tron钱包地址。
