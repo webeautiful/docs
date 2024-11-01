@@ -1,0 +1,188 @@
+---
+title: '签名ETH交易'
+description: 'ETH及其TOKEN的签名方式一样，只是构建的交易参数不同'
+---
+## signEthTransaction
+To implement the `signEthTransaction` function in Flutter, you'll need to use the `web3dart` package for Ethereum transactions and `encrypt` for AES encryption and decryption. Here’s a Flutter equivalent using Dart that will sign an Ethereum transaction with a provided private key.
+
+### Setup
+
+First, add the dependencies in your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  web3dart: ^2.0.2
+  encrypt: ^5.0.0
+```
+
+### Dart Implementation
+
+The `signEthTransaction` method below corresponds to your JavaScript code and includes encryption, transaction signing, and serialization. Make sure you have installed the dependencies first.
+
+```dart
+import 'dart:convert';
+import 'package:web3dart/web3dart.dart';
+import 'package:encrypt/encrypt.dart' as encrypt;
+import 'package:hex/hex.dart';
+
+String decryptPrivateKey(String encryptedPrivateKey, String password) {
+  final key = encrypt.Key.fromUtf8(password.padRight(32, ' '));
+  final iv = encrypt.IV.fromLength(16); // Adjust based on your actual IV settings
+  final encrypter = encrypt.Encrypter(encrypt.AES(key, mode: encrypt.AESMode.cbc));
+
+  final decrypted = encrypter.decrypt64(encryptedPrivateKey, iv: iv);
+  return decrypted;
+}
+
+Future<String> signEthTransaction({
+  required int nonce,
+  required String to,
+  required double value,
+  required int gasLimit,
+  required double gasPrice,
+  required String encryptedPrivateKey,
+  required String password,
+  int chainId = 1, // Mainnet by default, you can change it accordingly
+}) async {
+  // Decrypt the private key
+  final privateKeyHex = decryptPrivateKey(encryptedPrivateKey, password);
+  final privateKey = EthPrivateKey.fromHex(privateKeyHex);
+
+  // Create transaction parameters
+  final transaction = Transaction(
+    nonce: nonce,
+    to: EthereumAddress.fromHex(to),
+    value: EtherAmount.inWei(BigInt.from(value * 1e18)),
+    gasPrice: EtherAmount.inWei(BigInt.from(gasPrice * 1e9)),
+    maxGas: gasLimit,
+  );
+
+  // Connect to Web3 to sign the transaction
+  final web3client = Web3Client('', Client());
+
+  try {
+    // Sign transaction with the decrypted private key
+    final signedTx = await web3client.signTransaction(
+      privateKey,
+      transaction,
+      chainId: chainId,
+    );
+
+    // Return the serialized signed transaction in hex format
+    return HEX.encode(signedTx);
+  } finally {
+    web3client.dispose();
+  }
+}
+```
+
+### Explanation of Parameters
+
+- `nonce`: The transaction nonce.
+- `to`: The recipient address.
+- `value`: The amount of Ether to send, specified in Wei.
+- `gasLimit`: The maximum amount of gas to use for the transaction.
+- `gasPrice`: The gas price in Gwei.
+- `encryptedPrivateKey`: The AES-encrypted private key.
+- `password`: The password for decrypting the private key.
+- `chainId`: The chain ID for Ethereum networks (default is 1 for mainnet).
+
+### Usage Example
+
+```dart
+void main() async {
+  String encryptedPrivateKey = "ENCRYPTED_PRIVATE_KEY";
+  String password = "PASSWORD";
+
+  String signedTx = await signEthTransaction(
+    nonce: 1,
+    to: '0xReceiverAddress',
+    value: 0.1,
+    gasLimit: 21000,
+    gasPrice: 20,
+    encryptedPrivateKey: encryptedPrivateKey,
+    password: password,
+  );
+
+  print("Signed Transaction: $signedTx");
+}
+```
+
+Replace `"ENCRYPTED_PRIVATE_KEY"` and `"PASSWORD"` with the actual encrypted private key and decryption password. The result will be a signed Ethereum transaction in hex format, ready to broadcast to the Ethereum network.
+
+## signEthTokenTransaction
+
+To translate the `signEthTokenTransaction` method into Dart using the `web3dart` package, we can follow these steps:
+
+1. **Initialize Parameters**: We'll set up the required parameters like `nonce`, `contractAddress`, `to`, `value`, `gasLimit`, `gasPrice`, and `wei`.
+2. **Build the Transaction Data**: The Ethereum ERC20 `transfer` function has a specific ABI signature, which we can use to create the correct transaction data for the contract.
+3. **Sign and Serialize**: Using the web3dart library, we’ll sign the transaction with the provided private key and serialize it.
+
+Here's how you could implement it in Dart with `web3dart`:
+
+```dart
+import 'package:web3dart/web3dart.dart';
+import 'package:convert/convert.dart';
+import 'package:web3dart/crypto.dart'; // For the bytes padding
+
+Future<String> signEthTokenTransaction({
+  required int nonce,
+  required EthereumAddress contractAddress,
+  required EthereumAddress to,
+  required BigInt value,
+  required BigInt gasLimit,
+  required EtherAmount gasPrice,
+  required int wei,
+  required String privateKeyHex,
+  required int chainId,
+}) async {
+  // Connect to the Ethereum client
+  final client = Web3Client('', Client());
+
+  // Format the 'value' to match the token's decimal places
+  final formattedValue = value * BigInt.from(10).pow(wei);
+
+  // Define the transfer function hash: keccak256("transfer(address,uint256)").take(4) => 'a9059cbb'
+  final functionSignature = hex.decode('a9059cbb');
+
+  // Format 'to' address (20 bytes) and 'value' (32 bytes)
+  final toBytes = hex.decode(to.hexEip55.substring(2)).padLeft(32, 0);
+  final valueBytes = hex.decode(formattedValue.toRadixString(16).padLeft(64, '0'));
+
+  // Combine function signature, to address, and value into transaction data
+  final transactionData = BytesBuilder();
+  transactionData.add(functionSignature);
+  transactionData.add(toBytes);
+  transactionData.add(valueBytes);
+
+  // Prepare the transaction
+  final transaction = Transaction(
+    nonce: nonce,
+    maxGas: gasLimit.toInt(),
+    gasPrice: gasPrice,
+    to: contractAddress,
+    value: EtherAmount.zero(),  // For token transfer, ETH value is zero
+    data: transactionData.toBytes(),
+  );
+
+  // Convert private key and sign transaction
+  final privateKey = EthPrivateKey.fromHex(privateKeyHex);
+  final signedTx = await client.signTransaction(privateKey, transaction, chainId: chainId);
+
+  // Clean up the client and return serialized transaction
+  client.dispose();
+  return hex.encode(signedTx);
+}
+```
+
+### Explanation of Key Parts:
+- **Function Signature**: The `transfer(address,uint256)` function has a hashed method ID of `a9059cbb`. We add this to the beginning of our data.
+- **Formatting the Parameters**: Both the `to` address and `value` parameters are formatted to be 32 bytes each for compatibility with Ethereum’s ABI.
+- **Transaction Creation**: `Transaction` from web3dart is used, where `value` is zero for token transactions. The gas limit and price are provided according to the function inputs.
+- **Signing the Transaction**: Finally, we sign the transaction using the private key and serialize it for broadcast.
+
+This function returns the signed, serialized transaction in hexadecimal form, ready to be sent to the Ethereum network. Make sure to replace `YOUR-PROJECT-ID` with your actual Infura or Ethereum node provider’s project ID.
+
+Citations:
+
+[示例代码] https://github.com/xclud/web3dart/blob/main/test/core/sign_transaction_test.dart

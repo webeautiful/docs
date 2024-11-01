@@ -34,7 +34,7 @@
         "flutter/import_eth_private",
         "flutter/import_tron_private",
         "flutter/encrypt",
-        "flutter/sign_eth_token_tx"
+        "flutter/sign_eth_tx"
       ]
     }
   ],
