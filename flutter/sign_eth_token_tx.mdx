@@ -1,0 +1,80 @@
+---
+title: '签名ETH TOKEN交易'
+description: 'Flutter中如何对ETH TOKEN交易数据进行签名'
+---
+
+当然可以！下面是一个将以太坊代币交易参数签名的逻辑封装成`signEthTokenTransaction`函数的示例。该函数接收必要的参数并返回签名后的交易数据。
+
+## 封装函数
+
+### 1. 定义函数
+
+```dart
+import 'package:web3dart/web3dart.dart';
+
+Future<String> signEthTokenTransaction({
+  required String privateKey,
+  required String toAddress,
+  required BigInt amountInWei,
+  required BigInt nonce,
+  required BigInt gasPrice,
+  required BigInt gasLimit,
+}) async {
+  // 创建凭证
+  final credentials = EthPrivateKey.fromHex(privateKey);
+  final senderAddress = await credentials.extractAddress();
+
+  // 构造交易
+  final transaction = Transaction(
+    from: senderAddress,
+    to: EthereumAddress.fromHex(toAddress),
+    value: EtherAmount.inWei(amountInWei),
+    nonce: nonce,
+    gasPrice: EtherAmount.inWei(gasPrice),
+    gas: gasLimit,
+  );
+
+  // 签名交易
+  final signedTransaction = await credentials.signTransaction(transaction);
+
+  // 返回签名后的交易数据的十六进制字符串
+  return signedTransaction.toString();
+}
+```
+
+### 2. 使用示例
+
+您可以通过调用`signEthTokenTransaction`函数来签名交易，以下是如何使用该函数的示例：
+
+```dart
+void main() async {
+  final privateKey = 'YOUR_PRIVATE_KEY'; // 替换为您的私钥
+  final toAddress = '0xRecipientAddress'; // 替换为接收地址
+  final amountInWei = BigInt.from(1000000000000000000); // 1 ETH in wei
+  final nonce = BigInt.from(0); // 设置nonce（可以根据需要调整）
+  final gasPrice = BigInt.from(20000000000); // 设置gas价格（单位为wei）
+  final gasLimit = BigInt.from(21000); // 设置gas限制
+
+  try {
+    final signedTransaction = await signEthTokenTransaction(
+      privateKey: privateKey,
+      toAddress: toAddress,
+      amountInWei: amountInWei,
+      nonce: nonce,
+      gasPrice: gasPrice,
+      gasLimit: gasLimit,
+    );
+
+    print('Signed Transaction: $signedTransaction');
+  } catch (e) {
+    print('Error signing transaction: $e');
+  }
+}
+```
+
+## 注意事项
+
+- 确保替换示例中的私钥和接收地址。
+- 在实际应用中，请妥善保管私钥，避免泄露。
+- `nonce`、`gasPrice`和`gasLimit`可以根据实际需求进行调整。
+- 此函数不连接到以太坊网络，因此确保传入的参数（如nonce）是正确的，以避免交易失败。

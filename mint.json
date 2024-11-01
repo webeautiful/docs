@@ -33,7 +33,8 @@
         "flutter/import_btc_private",
         "flutter/import_eth_private",
         "flutter/import_tron_private",
-        "flutter/encrypt"
+        "flutter/encrypt",
+        "flutter/sign_eth_token_tx"
       ]
     }
   ],
