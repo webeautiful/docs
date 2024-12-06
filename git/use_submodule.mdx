@@ -1,0 +1,91 @@
+---
+title: 'git submodule 用法'
+description: '当在主项目 A 中引入项目 B 作为子模块时，你可以通过以下步骤确保在 `git clone` 主项目 A 时，项目 B 能够同步更新并初始化。'
+---
+
+### 实现步骤
+
+#### 1. **正确添加子模块**
+在主项目 A 中，将项目 B 添加为子模块：
+```bash
+git submodule add <项目B仓库URL> <子模块路径>
+git commit -m "Add project B as a submodule"
+```
+
+---
+
+#### 2. **设置子模块的更新策略**
+确保主项目 A 的 `.gitmodules` 文件中记录了子模块信息，类似如下：
+```ini
+[submodule "projectB"]
+    path = path/to/projectB
+    url = <项目B仓库URL>
+```
+
+---
+
+#### 3. **递归克隆子模块**
+用户在克隆主项目 A 时，可以直接使用 `--recurse-submodules` 参数，自动初始化并更新子模块：
+```bash
+git clone --recurse-submodules <主项目A仓库URL>
+```
+
+> **注意：** 如果用户忘记加 `--recurse-submodules` 参数，可以手动更新子模块：
+```bash
+git submodule update --init --recursive
+```
+
+---
+
+#### 4. **让子模块保持与远程同步**
+默认情况下，子模块会固定在主项目中记录的提交（即哈希值）。为了让子模块（项目 B）同步到其最新的远程提交，可以通过以下方式：
+
+1. **更新到远程最新提交**：
+   使用以下命令手动同步子模块到最新的远程分支：
+   ```bash
+   git submodule update --remote --recursive
+   ```
+
+2. **将子模块锁定到最新的远程提交**：
+   如果希望主项目记录最新的子模块提交，执行以下步骤：
+   - 进入子模块目录：
+     ```bash
+     cd path/to/projectB
+     git pull origin <branch>  # 拉取最新的远程分支
+     ```
+   - 返回主项目，提交更新的子模块引用：
+     ```bash
+     cd -
+     git add path/to/projectB
+     git commit -m "Update submodule to latest commit"
+     ```
+
+---
+
+#### 5. **配置自动同步子模块**
+如果希望在克隆主项目时，子模块能自动更新到远程的最新提交，可配置全局或项目级别的 `submodule.recurse` 选项：
+
+```bash
+git config --global submodule.recurse true
+```
+
+这样，执行 `git pull` 或 `git clone` 时，会递归地拉取和更新子模块。
+
+---
+
+### 推荐的工作流
+1. 主项目维护者在子模块有更新时，进入子模块目录拉取更新，并将最新的子模块提交记录到主项目。
+2. 其他开发者在克隆主项目时，执行以下命令确保子模块同步更新：
+   ```bash
+   git clone --recurse-submodules <主项目A仓库URL>
+   ```
+   或手动初始化：
+   ```bash
+   git submodule update --init --remote --recursive
+   ```
+   或全局配置自动同步子模块:
+   ```bash
+   git config --global submodule.recurse true
+   ```
+
+通过这种方式，可以确保主项目 A 和子项目 B 在协作开发时始终保持一致和同步！
